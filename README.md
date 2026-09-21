@@ -1,4 +1,4 @@
-# Nimbus – Weather App
+# PRODIGY_WD_05
 
 A real-time weather web app built with plain **HTML, CSS and JavaScript** (no frameworks, no build step, no API key).
 Built for **Task 05 – Weather App** (Prodigy Infotech web development internship).
