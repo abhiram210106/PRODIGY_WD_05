@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1a5fc8" id="themeColor">
+  <meta name="description" content="Live weather for your location or any city: current conditions, hourly and 7-day forecast, air quality, wind, UV index and more.">
+  <title>Nimbus – Live weather</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=DM+Sans:opsz,wght@9..40,400..700&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='24' cy='24' r='13' fill='%23ffc93c'/%3E%3Ccircle cx='28' cy='42' r='9' fill='%23fff'/%3E%3Ccircle cx='39' cy='36' r='12' fill='%23fff'/%3E%3Ccircle cx='51' cy='43' r='8' fill='%23fff'/%3E%3Crect x='28' y='42' width='23' height='9' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Shared gradients used by the weather icons -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <radialGradient id="g-sun" cx="40%" cy="35%" r="70%">
+        <stop offset="0" stop-color="#FFE68A"/><stop offset="1" stop-color="#FFA726"/>
+      </radialGradient>
+      <linearGradient id="g-cloud" gradientUnits="userSpaceOnUse" x1="0" y1="22" x2="0" y2="50">
+        <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D3DDEA"/>
+      </linearGradient>
+      <linearGradient id="g-cloud-dk" gradientUnits="userSpaceOnUse" x1="0" y1="22" x2="0" y2="50">
+        <stop offset="0" stop-color="#B7C3D2"/><stop offset="1" stop-color="#7B899C"/>
+      </linearGradient>
+      <linearGradient id="g-moon" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#FFF7D8"/><stop offset="1" stop-color="#E4D6A6"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <!-- Background layers -->
+  <div class="sky" id="sky" aria-hidden="true"></div>
+  <div class="glow" aria-hidden="true"></div>
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <div class="flash" id="flash" aria-hidden="true"></div>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+
+  <div class="app">
+
+    <header class="top">
+      <a class="brand" href="./" aria-label="Nimbus home">
+        <svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true">
+          <circle cx="24" cy="24" r="13" fill="url(#g-sun)"/>
+          <g fill="#fff"><circle cx="28" cy="42" r="9"/><circle cx="39" cy="36" r="12"/><circle cx="51" cy="43" r="8"/><rect x="28" y="42" width="23" height="9"/></g>
+        </svg>
+        Nimbus
+      </a>
+
+      <form class="search" id="searchForm" role="search" autocomplete="off">
+        <svg class="s-ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" name="q" type="search" placeholder="Search for a city or place"
+               role="combobox" aria-label="Search for a city or place" aria-autocomplete="list"
+               aria-expanded="false" aria-controls="suggest" autocapitalize="words" spellcheck="false" enterkeyhint="search">
+        <button type="button" class="ibtn" id="locate" title="Use my current location" aria-label="Use my current location">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        </button>
+        <ul class="suggest" id="suggest" role="listbox" aria-label="Place suggestions" hidden></ul>
+      </form>
+
+      <div class="units" role="group" aria-label="Temperature units">
+        <button type="button" data-unit="metric" aria-pressed="true">°C</button>
+        <button type="button" data-unit="imperial" aria-pressed="false">°F</button>
+      </div>
+    </header>
+
+    <div class="saved" id="saved" aria-label="Saved places" hidden></div>
+    <div class="notice" id="notice" role="status" hidden></div>
+
+    <main id="main" data-state="loading" aria-busy="true">
+
+      <section class="hero" aria-label="Current weather">
+        <div class="hero-place">
+          <div class="name-row">
+            <h1 id="place">Finding weather…</h1>
+            <button type="button" class="star" id="saveBtn" aria-pressed="false" aria-label="Save this place" title="Save this place">
+              <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m12 3.2 2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 17.1 6.6 20l1.1-6.1L3.2 9.6l6.1-.8z"/></svg>
+            </button>
+          </div>
+          <p class="muted" id="region">&nbsp;</p>
+          <p class="muted" id="clock">&nbsp;</p>
+        </div>
+
+        <div class="hero-icon" id="heroIcon" aria-hidden="true"></div>
+
+        <div class="hero-now">
+          <div class="temp"><span id="temp">--</span><sup>°</sup></div>
+          <p class="cond" id="cond">&nbsp;</p>
+          <p class="summary" id="summary">&nbsp;</p>
+        </div>
+
+        <dl class="hero-facts">
+          <div><dt>Feels like</dt><dd id="feels">--</dd></div>
+          <div><dt>High</dt><dd id="hi">--</dd></div>
+          <div><dt>Low</dt><dd id="lo">--</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel hourly" aria-labelledby="hTitle">
+        <h2 id="hTitle">Next 24 hours</h2>
+        <div id="hourly"></div>
+      </section>
+
+      <div class="grid">
+        <section class="panel daily" aria-labelledby="dTitle">
+          <h2 id="dTitle">7-day forecast</h2>
+          <ol class="days" id="days"></ol>
+        </section>
+
+        <section class="panel details" aria-labelledby="xTitle">
+          <h2 id="xTitle">Conditions right now</h2>
+          <dl class="stats" id="stats"></dl>
+          <div class="sun" id="sun"></div>
+        </section>
+      </div>
+
+    </main>
+
+    <footer class="foot">
+      <p id="updated">&nbsp;</p>
+      <p>Weather and air quality data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>.</p>
+    </footer>
+  </div>
+
+  <div class="sr-only" id="srStatus" role="status" aria-live="polite"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
